@@ -1,0 +1,1 @@
+All request count: {13757391347} BaseLine (test with 1 thread): {463462427.743354} ops/sec
