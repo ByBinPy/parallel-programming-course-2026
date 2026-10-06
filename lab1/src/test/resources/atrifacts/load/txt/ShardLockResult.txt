@@ -1,0 +1,5 @@
+All request count: {4965923076} Test with 1 threads: {171512427.143714} ops/sec
+All request count: {5553622792} Test with 2 threads: {19699795.204795} ops/sec
+All request count: {5883681626} Test with 4 threads: {11036438.161838} ops/sec
+All request count: {6004263262} Test with 8 threads: {3881614.185814} ops/sec
+All request count: {6063202532} Test with 16 threads: {1932756.643357} ops/sec

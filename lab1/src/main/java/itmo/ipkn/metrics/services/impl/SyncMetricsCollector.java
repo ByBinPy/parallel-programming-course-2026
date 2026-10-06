@@ -9,7 +9,7 @@ import static java.lang.Math.toIntExact;
 
 public class SyncMetricsCollector implements MetricsCollector {
 
-    private long minValue;
+    private long minValue = Long.MAX_VALUE;
     private long maxValue;
     private long valueSum;
     private long recordCounter;

@@ -2,8 +2,11 @@ package itmo.ipkn.metrics;
 
 import itmo.ipkn.metrics.domain.Snapshot;
 import itmo.ipkn.metrics.services.MetricsCollector;
+import itmo.ipkn.metrics.services.impl.BufferedMetricsCollector;
 import itmo.ipkn.metrics.services.impl.EmptyLockMetricsCollector;
+import itmo.ipkn.metrics.services.impl.LocalizedMetricsCollector;
 import itmo.ipkn.metrics.services.impl.MetricsCollectorImpl;
+import itmo.ipkn.metrics.services.impl.ShardedMetricsCollectorImpl;
 import itmo.ipkn.metrics.services.impl.SyncMetricsCollector;
 
 import java.time.Duration;
@@ -11,11 +14,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static java.lang.Math.pow;
+import static itmo.ipkn.metrics.DataUtil.initValuesByZipfLaw;
 
 public class ZipfLoadTests {
 
@@ -25,56 +27,45 @@ public class ZipfLoadTests {
     public static void main(String[] args) throws InterruptedException {
         long[] testValues = new long[1 << 20];
         initValuesByZipfLaw(testValues);
-        testSynchronizedEmptyLockCollector(testValues);
+        testBufferedCollector(testValues);
     }
 
     private static void testDefaultWithOneThread(long[] testValues) throws InterruptedException {
-        final MetricsCollector syncMetricsCollector = new MetricsCollectorImpl();
-        double median = measurePoint(syncMetricsCollector, testValues, 1);
+        final MetricsCollector metricsCollector = new MetricsCollectorImpl();
+        double median = measurePoint(metricsCollector, testValues, 1);
         System.out.printf("BaseLine (test with 1 thread): {%f} ops/sec", median);
     }
 
     private static void testSynchronizedCollector(long[] testValues) throws InterruptedException {
         final MetricsCollector syncMetricsCollector = new SyncMetricsCollector();
-        List<Integer> threadCounts = List.of(1, 2, 4, 8, 16);
-        for (Integer threadCount : threadCounts) {
-            double median = measurePoint(syncMetricsCollector, testValues, threadCount);
-            System.out.printf("Test with %d threads: {%f} ops/sec\n", threadCount, median);
-        }
+        runTestOnCollector(testValues, syncMetricsCollector);
     }
 
     private static void testSynchronizedEmptyLockCollector(long[] testValues) throws InterruptedException {
-        final MetricsCollector syncMetricsCollector = new EmptyLockMetricsCollector();
-        List<Integer> threadCounts = List.of(1, 2, 4, 8, 16);
-        for (Integer threadCount : threadCounts) {
-            double median = measurePoint(syncMetricsCollector, testValues, threadCount);
-            System.out.printf("Test with %d threads: {%f} ops/sec\n", threadCount, median);
-        }
+        final MetricsCollector emptyLockMetricsCollector = new EmptyLockMetricsCollector();
+        runTestOnCollector(testValues, emptyLockMetricsCollector);
     }
 
-    private static void initValuesByZipfLaw(long[] testValues) {
-        final long seed = 67;
-        final double kf = 1.15;
-        final int maxValue = 1024;
+    private static void testShardedCollector(long[] testValues) throws InterruptedException {
+        final MetricsCollector shardedMetricsCollector = new ShardedMetricsCollectorImpl();
+        runTestOnCollector(testValues, shardedMetricsCollector);
+    }
 
-        double[] cdf = new double[maxValue];
-        double sum = 0;
-        for (int base = 1; base <= maxValue; base++) {
-            sum += 1.0 / pow(base, kf);
-            cdf[base - 1] = sum;
-        }
+    private static void testLocalizedCollector(long[] testValues) throws InterruptedException {
+        final MetricsCollector localizedMetricsCollector = new LocalizedMetricsCollector();
+        runTestOnCollector(testValues, localizedMetricsCollector);
+    }
 
-        for (int i = 0; i < maxValue; i++) {
-            cdf[i] /= sum;
-        }
+    private static void testBufferedCollector(long[] testValues) throws InterruptedException {
+        final MetricsCollector bufferedMetricsCollector = new BufferedMetricsCollector();
+        runTestOnCollector(testValues, bufferedMetricsCollector);
+    }
 
-        Random random = new Random(seed);
-        for (int i = 0; i < testValues.length; i++) {
-            int insertionPoint = Arrays.binarySearch(cdf, random.nextDouble());
-            if (insertionPoint < 0) {
-                insertionPoint = -insertionPoint - 1;
-            }
-            testValues[i] = insertionPoint + 1;
+    private static void runTestOnCollector(long[] testValues, MetricsCollector metricsCollector) throws InterruptedException {
+        List<Integer> threadCounts = List.of(1, 2, 4, 8, 16);
+        for (Integer threadCount : threadCounts) {
+            double median = measurePoint(metricsCollector, testValues, threadCount);
+            System.out.printf("Test with %d threads: {%f} ops/sec\n", threadCount, median);
         }
     }
 

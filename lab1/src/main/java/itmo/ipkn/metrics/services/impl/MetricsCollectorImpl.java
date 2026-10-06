@@ -11,7 +11,7 @@ public class MetricsCollectorImpl implements MetricsCollector {
 
     private final long[] buckets = new long[BUCKETS_COUNT];
 
-    private long minValue;
+    private long minValue = Long.MAX_VALUE;
     private long maxValue;
     private long valueSum;
     private long recordCounter;
