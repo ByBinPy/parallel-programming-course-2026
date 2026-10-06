@@ -1,0 +1,49 @@
+package itmo.ipkn.metrics.services.impl;
+
+import itmo.ipkn.metrics.domain.Snapshot;
+import itmo.ipkn.metrics.services.MetricsCollector;
+
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.lang.Math.toIntExact;
+
+public class MetricsCollectorImpl implements MetricsCollector {
+
+    private final long[] buckets = new long[BUCKETS_COUNT];
+
+    private long minValue = Long.MAX_VALUE;
+    private long maxValue;
+    private long valueSum;
+    private long recordCounter;
+
+    @Override
+    public void record(long value) {
+        int bucketIdx = toIntExact(min(value / BUCKETS_INTERVAL, BUCKETS_COUNT - 1));
+        buckets[bucketIdx]++;
+        recordCounter++;
+        valueSum += value;
+        minValue = min(value, minValue);
+        maxValue = max(value, maxValue);
+    }
+
+    @Override
+    public Snapshot snapshot() {
+        return new Snapshot(
+                buckets.clone(),
+                recordCounter,
+                valueSum,
+                minValue,
+                maxValue,
+                computePercentile(50, recordCounter, buckets),
+                computePercentile(99, recordCounter, buckets));
+    }
+    /*
+            long[] buckets,
+        long count,
+        long sum,
+        long min,
+        long max,
+        long p50,
+        long p99
+     */
+}
