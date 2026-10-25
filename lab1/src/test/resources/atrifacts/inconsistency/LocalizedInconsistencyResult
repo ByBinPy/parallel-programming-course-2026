@@ -1,0 +1,2 @@
+Broken snapshots: {10000}. Buckets sum was less than count: {10000}. Buckets sum was more than count: {0}
+MetricsCollector result count: {8799032576}. Threads result count: {34371221}
